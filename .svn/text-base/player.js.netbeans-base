@@ -1,0 +1,323 @@
+var player = [];
+function removePlayer(pl){
+    var index = player.indexOf(pl);
+    if( index != -1 ){
+        player.remove(index, index);
+    }
+}
+
+/**
+ * Obiekt gracza
+ * 
+ * @param {Number} x pozycja x gracza
+ * @param {Number} y pozycja y gracza
+ */
+function Player(x, y){
+    
+    this.moveTop = false;
+    this.moveRight = false;
+    this.moveBottom = false;
+    this.moveLeft = false;
+    this.fire = false;
+    this.r = 15;
+    this.lastFireTime = 0;
+    this.fireInterval = 200;
+    this.crashed = false;
+    this.outOfBoundsY = false;
+    this.outOfBoundsX = false;
+    this.outOfBounds = false;
+    
+    /**
+     * Pozycja działka relatywnie do środka układu
+     */
+    this.gunPositionRelative = 15;
+    
+    
+    /**
+     * Kąt nachylenia
+     * @param Number
+     */
+    var angle = 2*Math.PI;
+    /**
+     * Przyśpieszenie
+     * @param Number
+     */
+    var a = 0;
+    /**
+     * Prędkość
+     * @param Number
+     */
+    var v = 0;
+    
+    
+    this.__defineGetter__("getX",function(){
+        return x
+    });
+    this.__defineGetter__("getY",function(){
+        return y
+    });
+    this.__defineGetter__("getA",function(){
+        return a
+    });
+    this.__defineGetter__("getV",function(){
+        return v
+    });
+    this.__defineGetter__("getAngle",function(){
+        return angle
+    });
+    /**
+     * Set player's X position 
+     */
+    this.__defineSetter__('setX',function(value){
+        x = value;
+    });
+    this.__defineSetter__('setY',function(value){
+        y = value
+    });
+    this.__defineSetter__('setA',function(value){
+        a = value
+    });
+    this.__defineSetter__('setV',function(value){
+        v = value
+    });
+    this.__defineSetter__('setAngle',function(value){
+        angle = value;
+    });
+}
+/**
+ * Od świeżenie stanu gracza w pętli głównej gry
+ */
+Player.prototype.loopEvent = function(keysPressed){
+    this.processInputs(keysPressed);
+}
+Player.prototype.processInputs = function(keysPressed){
+    
+    if( keysPressed.indexOf(Keys.UP) != -1 ){
+        this.moveTop = true;
+    } else {
+        this.moveTop = false;
+    }
+    
+    if( keysPressed.indexOf(Keys.DOWN) != -1 ){
+        this.moveBottom = true;
+    } else {
+        this.moveBottom = false;
+    }
+    
+    if( keysPressed.indexOf(Keys.LEFT) != -1 ){
+        this.moveLeft = true;
+    }else {
+        this.moveLeft = false;
+    }
+    
+    if( keysPressed.indexOf(Keys.RIGHT) != -1 ){
+        this.moveRight = true;
+    } else {
+        this.moveRight = false;
+    }
+    
+    if( keysPressed.indexOf(Keys.SPACE) != -1 ){
+        this.fire = true;
+    } else {
+        this.fire = false;
+    }
+    
+}
+
+Player.prototype.clearLoopCache = function(){
+    this.cacheIsTop = this.cacheIsBottom = this.cacheIsLeft = this.cacheIsRight = this.cacheCenter = false;
+}
+
+Player.prototype.isTop = function(){
+    if( !this.cacheIsTop )
+        this.cacheIsTop = Math.toAbsDegrees(this.getAngle);
+    return ( this.cacheIsTop > 270 || this.cacheIsTop < 90 );
+}
+Player.prototype.isBottom = function(){
+    if( !this.cacheIsBottom || this.cacheIsBottom == undefined )
+        this.cacheIsBottom = Math.toAbsDegrees(this.getAngle);
+    return ( this.cacheIsBottom < 270 && this.cacheIsBottom > 90 );
+}
+Player.prototype.isRight = function(){
+    if( !this.cacheIsRight || this.cacheIsRight == undefined )
+        this.cacheIsRight = Math.toAbsDegrees(this.getAngle);
+    
+    return ( this.cacheIsRight > 0 && this.cacheIsRight < 180 );
+}
+Player.prototype.isLeft = function(){
+    if( !this.cacheIsLeft || this.cacheIsLeft == undefined )
+        this.cacheIsLeft = Math.toAbsDegrees(this.getAngle);
+    return ( this.cacheIsLeft > 180 && this.cacheIsLeft < 360 );
+}
+
+
+/**
+ * zmiana pozycji na podstawie a,v i angle
+ */
+Player.prototype.step = function(){
+    if( this.crashed ) {
+        return;
+    }
+    this.clearLoopCache();
+    
+    var a = -0.08;
+    if( this.moveTop ){
+        a = 0.3;
+    } else if( this.moveBottom ){
+        a = -0.15;
+    }
+    
+    if( this.moveLeft ){
+        this.setAngle = this.getAngle - Math.PI/35;
+    } else if( this.moveRight ){
+        this.setAngle = this.getAngle + Math.PI/35;
+    }
+    
+    
+    this.setV = this.getV+a;
+    if( this.getV < 0 ){
+        this.setV = 0;
+    }
+    if( this.getV > 10 ){
+        this.setV = 10;
+    }
+    
+    var newX = this.getX + Math.cos(this.getAngle - Math.PI/2) * this.getV;
+    var newY = this.getY + Math.sin(this.getAngle - Math.PI/2) * this.getV;
+    
+    this.setX = newX;
+    this.setY = newY;
+    
+    //    //console.log( "player: ", player.indexOf(this), "y: ", newY );
+    var yPlayer = null, xPlayer = null;
+    
+    //Rysowanie przejścia przez końce canvasu w osi Y
+    if( !this.outOfBoundsY && !this.outOfBoundsX && newY < 25 ){ //create new player object in the bottom of canvas
+        yPlayer = new Player(newX, canvasSize[1]+newY);
+        yPlayer.setV = this.getV;
+        yPlayer.setAngle = this.getAngle;
+        yPlayer.lastFireTime = this.lastFireTime;
+        yPlayer.outOfBoundsY = true;
+        player[player.length] = yPlayer;
+        this.outOfBoundsY = true;
+    }else if( this.outOfBoundsY && this.isTop() && newY < -20 ){
+        removePlayer(this);
+    } else if( !this.outOfBoundsY && !this.outOfBoundsX && newY > canvasSize[1]-20 ){
+        yPlayer = new Player(newX, -(canvasSize[1]-newY));
+        yPlayer.setV = this.getV;
+        yPlayer.setAngle = this.getAngle;
+        yPlayer.lastFireTime = this.lastFireTime;
+        yPlayer.outOfBoundsY = true;
+        player[player.length] = yPlayer;
+        this.outOfBoundsY = true;
+    } else if( this.outOfBoundsY && this.isBottom() && newY > canvasSize[1]+20 ){
+        removePlayer(this);
+    } else if( this.outOfBoundsY ){
+        //wszedł obiekt w całości w planszę i trzeba usunąć flagę
+        if( this.isTop() && newY > 40 && newY < canvasSize[1]-20 ){ 
+            this.outOfBoundsY = false;
+        } else if( this.isBottom() && newY < canvasSize[1]-20 && newY > 25){
+            this.outOfBoundsY = false;
+        }
+    }
+    //Rysowanie przejścia przez końce canvasu w osi X
+    if( !this.outOfBoundsX && !this.outOfBoundsY && newX < 20 ){
+        xPlayer = new Player(canvasSize[0]+newX, newY);
+        xPlayer.setV = this.getV;
+        xPlayer.setAngle = this.getAngle;
+        xPlayer.lastFireTime = this.lastFireTime;
+        xPlayer.outOfBoundsX = true;
+        player[player.length] = xPlayer;
+        this.outOfBoundsX = true;
+    } else if( this.outOfBoundsX && this.isLeft() && newX < -20 ){
+        removePlayer(this);
+    } else if( !this.outOfBoundsX && !this.outOfBoundsY && newX > canvasSize[0]-20 ){
+        xPlayer = new Player(-(canvasSize[0]-newX), newY);
+        xPlayer.setV = this.getV;
+        xPlayer.setAngle = this.getAngle;
+        xPlayer.lastFireTime = this.lastFireTime;
+        xPlayer.outOfBoundsX = true;
+        player[player.length] = xPlayer;
+        this.outOfBoundsX = true;
+    } else if( this.outOfBoundsX && this.isRight() && newX > canvasSize[0]+20 ){
+        removePlayer(this);
+    } else if( this.outOfBoundsX ){
+        if( this.isLeft() && newX > 40 && newX < canvasSize[0]-20 ){ 
+            this.outOfBoundsX = false;
+        } else if( this.isRight() && newX < canvasSize[0]-20 && newX > 25){
+            this.outOfBoundsX = false;
+        }
+    }
+    
+    
+    
+    var crashObj = game.isCollision(this,false);
+    if( crashObj ){
+        this.crashed = true;
+        if( crashObj instanceof Asteroid ){
+            crashObj.divide();
+        }
+        playerCrashedHandler();
+        return;
+    }
+    
+    if( /*!this.outOfBoundsY && !this.outOfBoundsY &&*/ this.fire ){    
+        var now = new Date().getTime();
+        if( this.lastFireTime != 0 && (now - this.lastFireTime) < this.fireInterval ){
+            return
+        }
+        this.lastFireTime = now;
+        
+        var posX = (this.gunPositionRelative * Math.cos( this.getAngle - Math.PI/2) + this.getX);
+        var posY = (this.gunPositionRelative * Math.sin( this.getAngle - Math.PI/2) + this.getY);
+        
+        var bullet = new Bullet(posX, posY, this.getAngle - Math.PI/2);
+        Bullets[Bullets.length] = bullet;
+    }
+    
+}
+/**
+ * narysowanie playera
+ */
+Player.prototype.draw = function(ctx){
+    ctx.save();
+    //log.innerHTML = this.getX + " : " + this.getY;
+    
+    ctx.translate( this.getX, this.getY );
+    ctx.rotate(this.getAngle);
+    
+    var color = '#ffffff';
+    if( this.crashed ){
+        color = 'red';
+    }
+    //shape
+    ctx.beginPath();
+    ctx.fillStyle = color;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+    ctx.shadowBlur = 2;
+    ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+    ctx.moveTo(0,-20);
+    ctx.lineTo(-20,20);
+    ctx.lineTo(20,20);
+    ctx.fill();
+    
+    //gun
+    //this.ctx.save();
+    ctx.fillStyle = '#c00';
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.shadowBlur = 0;
+    ctx.fillRect(-1,-15,2,-8);
+    //this.ctx.restore();
+    
+    //    ctx.fillStyle = '#000000';
+    //    if( this.isRight() ){
+    //        ctx.fillText('right',-9,15);
+    //    } else if( this.isLeft() ) {
+    //        ctx.fillText('left',-9,15);
+    //    }
+    
+    
+    ctx.restore();
+}

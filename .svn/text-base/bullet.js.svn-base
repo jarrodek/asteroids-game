@@ -1,0 +1,82 @@
+var Bullets = [];
+
+/**
+ * Usuwa z tablicy pocisków obiekt
+ * @param {Bullet} bullet
+ */
+function removeBullet(bullet){
+    var index = Bullets.indexOf(bullet);
+    if( index != -1 ){
+        Bullets.remove(index, index);
+    }
+}
+
+/**
+ * Wystrzelenie pocisku.
+ * 
+ * @param {Number} x pozycja startowa
+ * @param {Number} y pozycja startowa
+ * @param {String} dir kiedunek: top,bottom,left,right
+ */
+function Bullet(x,y,dir){
+    var stepSpeed = 15;
+    this.lifeTime = 50;
+    this.r = 5;
+    this.__defineGetter__("getX",function(){
+        return x;
+    });
+    this.__defineGetter__("getY",function(){
+        return y;
+    });
+    this.__defineGetter__("getDir",function(){
+        return dir;
+    });
+    this.__defineGetter__("getStepSpeed",function(){
+        return stepSpeed;
+    });
+    this.__defineSetter__('setX',function(value){
+        x = value;
+    });
+    this.__defineSetter__('setY',function(value){
+        y = value;
+    });
+    this.__defineSetter__('setDir',function(value){
+        dir = value;
+    });
+    this.__defineGetter__("setStepSpeed",function(value){
+        stepSpeed = value;
+    });
+}
+Bullet.prototype = {
+    draw: function(ctx){
+        ctx.save();
+        ctx.translate( this.getX, this.getY );
+        if( this.lifeTime >= 10 )
+            ctx.fillStyle = 'rgba(255,255,255,1)';
+        else
+            ctx.fillStyle = 'rgba(255,255,255,0.'+this.lifeTime+')';
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+        ctx.shadowBlur = 2;
+        ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+        ctx.moveTo(0,0);
+        ctx.fillRect(0,0,3,3);
+        
+        ctx.restore();
+    },
+    step: function(){
+        this.lifeTime--;        
+        this.setX = this.getX + Math.cos(this.getDir) * this.getStepSpeed;
+        this.setY = this.getY + Math.sin(this.getDir) * this.getStepSpeed;
+        var obj = game.isCollision(this,false);
+        if( obj != false ){
+            this.lifeTime = 0;
+            
+            if( obj instanceof Asteroid ){
+                obj.divide();
+            }
+            
+            return;
+        }
+    }
+}
