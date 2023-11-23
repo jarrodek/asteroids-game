@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "noEmitOnError": true,
+    "lib": [
+      "ESNext",
+      "dom"
+    ],
+    "strict": true,
+    "esModuleInterop": false,
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "importHelpers": true,
+    "noImplicitOverride": true,
+    "outDir": "out-tsc",
+    "rootDir": "./",
+    "sourceMap": true,
+    "inlineSources": true,
+    "declaration": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "declarationMap": true,
+    "pretty": true,
+    "skipLibCheck": true,
+    "checkJs": true,
+    "incremental": true,
+  },
+  "include": ["**/*.ts"]
+}
